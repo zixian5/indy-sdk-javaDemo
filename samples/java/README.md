@@ -71,7 +71,7 @@ Copy every library to the folder `/usr/lib`
 ```console
 $ sudo cp libindy/target/debug/libindy.so /usr/lib
 
-$sudo cp experimental/plugins/postgres_storage/target/debug/libindystrgpostgres.so /usr/lib
+$ sudo cp experimental/plugins/postgres_storage/target/debug/libindystrgpostgres.so /usr/lib
 
 ```
 If successful, then the `/usr/lib/libindy.so` file should be installed locally.
