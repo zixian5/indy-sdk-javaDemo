@@ -64,7 +64,7 @@ Build each project (indy-sdk/libindy, indy-sdk/cli, indy-sdk/experimental/plugin
 ```console
 $ cd <to each project directory>
 
-$ cargo build
+$ cargo clean && cargo build
 
 ```
 Copy every library to the folder `/usr/lib`
@@ -74,7 +74,7 @@ $ sudo cp libindy/target/debug/libindy.so /usr/lib
 $ sudo cp experimental/plugins/postgres_storage/target/debug/libindystrgpostgres.so /usr/lib
 
 ```
-If successful, then the `/usr/lib/libindy.so` file should be installed locally.
+If successful, then the `/usr/lib/libindy.so`and ``/usr/lib/libindystrgpostgres.so` file should be installed locally.
 
 ## Run this sample application
 
@@ -83,6 +83,7 @@ Under this folder, run
 ```console
 $ export RUST_LOG=trace
 $ export LD_LIBRARY_PATH=/usr/lib/
+$ mvn clean install
 $ mvn exec:java -Dexec.mainClass=Main
 ```
 
