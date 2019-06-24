@@ -19,6 +19,7 @@ import org.hyperledger.indy.sdk.wallet.Wallet;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import utils.AnoncredsUtils;
 import utils.EnvironmentUtils;
 import utils.PoolUtils;
 
@@ -55,6 +56,7 @@ public class GettingStarted {
         System.out.println("call the postgres library -> start");
         LibPostgres.API api = LibPostgres.api;
         api = Native.loadLibrary(library, LibPostgres.API.class);
+
         int result = api.postgresstorage_init();
         if (result != 0) {
             System.out.println("Error unable to load wallet storage: " + result);
@@ -1009,7 +1011,7 @@ public class GettingStarted {
         System.out.println("------------------------------");
 
         System.out.println("\"Acme\" - Revoke  credential");
-        acme.put("aliceCertRevRegDelta", Anoncreds.
+        acme.put("aliceCertRevRegDelta0", Anoncreds.
                 issuerRevokeCredential(
                         (Wallet)acme.get("wallet"), 
                         acmReader.getBlobStorageReaderHandle(), 
@@ -1018,19 +1020,20 @@ public class GettingStarted {
                 .get());
         
         System.out.println("\"Acme\" - Post RevocationRegistryDelta to Ledger");
-        acme.put("revocRegEntryReq", Ledger.
+        acme.put("revocRegEntryReq0", Ledger.
                 buildRevocRegEntryRequest(
                         acme.get("did").toString(), 
                         acme.get("revocRegId").toString(),
                         "CL_ACCUM", 
-                        acme.get("aliceCertRevRegDelta").toString())
+                        acme.get("aliceCertRevRegDelta0").toString())
                 .get());
-        Ledger.signAndSubmitRequest(
+
+        System.out.println( "result is"+Ledger.signAndSubmitRequest(
                 (Pool)acme.get("pool"), 
                 (Wallet)acme.get("wallet"), 
                 acme.get("did").toString(), 
-                acme.get("revocRegEntryReq").toString())
-        .get();
+                acme.get("revocRegEntryReq0").toString())
+        .get());
         
         System.out.println("==============================");
 
@@ -1051,6 +1054,44 @@ public class GettingStarted {
                 .get()
                 );
         
+        System.out.println("==============================");
+        System.out.println("==============================");
+        System.out.println("== Credential revocation - Acme revokes Alice's Job-Certificate  ==");
+        System.out.println("------------------------------");
+        
+        acme.put("aliceCertRevRegDelta", AnoncredsUtils.
+        issuerRecoverCredential((Wallet)acme.get("wallet"),
+            acmReader.getBlobStorageReaderHandle(),
+            acme.get("revocRegId").toString(),
+            acme.get("jobCertificateCredRevId").toString())
+        .get());
+
+        acme.put("revocRegEntryReq", Ledger.
+        buildRevocRegEntryRequest(
+                acme.get("did").toString(),
+                acme.get("revocRegId").toString(),
+                "CL_ACCUM",
+                acme.get("aliceCertRevRegDelta").toString())
+        .get());
+
+        System.out.println( "result is"+Ledger.signAndSubmitRequest(
+                (Pool)acme.get("pool"),
+                (Wallet)acme.get("wallet"),
+                acme.get("did").toString(),
+                acme.get("revocRegEntryReq").toString())
+        .get());
+        applyLoanBasic(thrift, alice, acme);
+        assertTrue(Anoncreds.
+                verifierVerifyProof(
+                        thrift.get("applyLoanProofRequest").toString(), 
+                        thrift.get("aliceApplyLoanProof").toString(), 
+                        (String) thrift.get("schemasForLoanApp"), 
+                        thrift.get("credDefsForLoanApp").toString(),
+                        thrift.get("revocDefsForLoanApp").toString(),
+                        thrift.get("revocRegsForLoanApp").toString())
+                .get()
+                );
+
         System.out.println("==============================");
         System.out.println(" \"Sovrin Steward\" -> Close and Delete wallet");
         Wallet wallet = (Wallet)steward.get("wallet");

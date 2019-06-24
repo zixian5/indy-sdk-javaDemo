@@ -499,7 +499,7 @@ pub extern fn indy_issuer_revoke_credential(command_handle: CommandHandle,
     res
 }
 
-/*/// Recover a credential identified by a cred_revoc_id (returned by indy_issuer_create_credential).
+/// Recover a credential identified by a cred_revoc_id (returned by indy_issuer_create_credential).
 ///
 /// The corresponding credential definition and revocation registry must be already
 /// created an stored into the wallet.
@@ -551,7 +551,7 @@ pub extern fn indy_issuer_recover_credential(command_handle: CommandHandle,
                 ))));
 
     prepare_result!(result)
-}*/
+}
 
 /// Merge two revocation registry deltas (returned by indy_issuer_create_credential or indy_issuer_revoke_credential) to accumulate common delta.
 /// Send common delta to ledger to reduce the load.
