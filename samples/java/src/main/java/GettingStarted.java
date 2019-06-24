@@ -1041,6 +1041,7 @@ public class GettingStarted {
         System.out.println("== Apply for the loan with Thrift again - Job-Certificate proving  ==");
         System.out.println("------------------------------");
 
+        
         applyLoanBasic(thrift, alice, acme);
 
         assertFalse(Anoncreds.
@@ -1056,9 +1057,10 @@ public class GettingStarted {
         
         System.out.println("==============================");
         System.out.println("==============================");
-        System.out.println("== Credential revocation - Acme revokes Alice's Job-Certificate  ==");
+        System.out.println("== Credential recovery - Acme recovers Alice's Job-Certificate  ==");
         System.out.println("------------------------------");
         
+        System.out.println("\"Acme\" - Recover  credential");
         acme.put("aliceCertRevRegDelta", AnoncredsUtils.
         issuerRecoverCredential((Wallet)acme.get("wallet"),
             acmReader.getBlobStorageReaderHandle(),
@@ -1066,6 +1068,7 @@ public class GettingStarted {
             acme.get("jobCertificateCredRevId").toString())
         .get());
 
+        System.out.println("\"Acme\" - Post RecoveryRegistryDelta to Ledger");
         acme.put("revocRegEntryReq", Ledger.
         buildRevocRegEntryRequest(
                 acme.get("did").toString(),
@@ -1080,7 +1083,14 @@ public class GettingStarted {
                 acme.get("did").toString(),
                 acme.get("revocRegEntryReq").toString())
         .get());
+        System.out.println("==============================");
+
+        System.out.println("==============================");
+        System.out.println("== Apply for the loan with Thrift again - Job-Certificate proving  ==");
+        System.out.println("------------------------------");
+
         applyLoanBasic(thrift, alice, acme);
+        
         assertTrue(Anoncreds.
                 verifierVerifyProof(
                         thrift.get("applyLoanProofRequest").toString(), 
