@@ -73,6 +73,7 @@ rmp-serde = "0.13.6"
 sodiumoxide = {version = "0.0.16", optional = true}
 time = "0.1.36"
 threadpool = "1.7.1"
+thread-scoped = "1.0.2"
 zmq = "0.8.2"
 lazy_static = "1.0"
 named_type = "0.1.3"

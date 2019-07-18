@@ -2,6 +2,8 @@ extern crate digest;
 extern crate indy_crypto;
 extern crate sha2;
 extern crate rust_base58;
+extern crate thread_scoped;
+extern crate time;
 
 use errors::prelude::*;
 use services::blob_storage::BlobStorageService;
@@ -9,10 +11,15 @@ use domain::anoncreds::revocation_registry_definition::RevocationRegistryDefinit
 
 use self::indy_crypto::cl::{Tail, RevocationTailsAccessor, RevocationTailsGenerator};
 use self::indy_crypto::errors::prelude::{IndyCryptoError, IndyCryptoErrorKind};
+use self::indy_crypto::pair::*;
 
 use self::rust_base58::{ToBase58, FromBase58};
 
 use std::rc::Rc;
+use std::sync::{Arc, Mutex};
+use std::thread;
+use std::collections::HashMap;
+use time::*;
 
 const TAILS_BLOB_TAG_SZ: u8 = 2;
 const TAIL_SIZE: usize = Tail::BYTES_REPR_SIZE;
@@ -70,9 +77,48 @@ impl RevocationTailsAccessor for SDKTailsAccessor {
     }
 }
 
+// pub fn store_tails_from_generator(service: Rc<BlobStorageService>,
+//                                   writer_handle: i32,
+//                                   rtg: &mut RevocationTailsGenerator) -> IndyResult<(String, String)> {
+//     debug!("store_tails_from_generator >>> writer_handle: {:?}", writer_handle);
+
+//     let blob_handle = service.create_blob(writer_handle)?;
+
+//     let version = vec![0u8, TAILS_BLOB_TAG_SZ];
+//     service.append(blob_handle, version.as_slice())?;
+
+//     let start = time::now();
+//     let mut st0:time::Tm = time::now();
+//     // let mut totalTime:i32 =0;
+//    // println!("the size is {:?}", rtg.size);
+//     while let Some(tail) = rtg.next()? {
+// 	// let ed = time::now();
+// 	// println!("The {}th calculate tail need {:?}", totalTime,ed-st0);
+//         let tail_bytes = tail.to_bytes()?;
+// 	// let st = time::now();
+//         service.append(blob_handle, tail_bytes.as_slice())?;
+//         // let en = time::now();
+// 	// println!("The {}th append to file {:?}", totalTime,en-st);
+// 	// totalTime=totalTime+1;
+// 	// st0 = time::now();
+//     }
+//     let end = time::now();
+//     println!("generate tails total time {:?}", end-start);
+
+//     let res = service.finalize(blob_handle).map(|(location, hash)| (location, hash.to_base58()))?;
+
+//     debug!("store_tails_from_generator <<< res: {:?}", res);
+//     Ok(res)
+// }
+
+pub struct TailAndIndex{
+    tail : Vec<u8>,
+    ind : u32
+}
+
 pub fn store_tails_from_generator(service: Rc<BlobStorageService>,
                                   writer_handle: i32,
-                                  rtg: &mut RevocationTailsGenerator) -> IndyResult<(String, String)> {
+                                  rtg: &RevocationTailsGenerator) -> IndyResult<(String, String)> {
     debug!("store_tails_from_generator >>> writer_handle: {:?}", writer_handle);
 
     let blob_handle = service.create_blob(writer_handle)?;
@@ -80,13 +126,67 @@ pub fn store_tails_from_generator(service: Rc<BlobStorageService>,
     let version = vec![0u8, TAILS_BLOB_TAG_SZ];
     service.append(blob_handle, version.as_slice())?;
 
-    while let Some(tail) = rtg.next()? {
-        let tail_bytes = tail.to_bytes()?;
+    let mut vec:Vec<TailAndIndex> = Vec::new();
+    let mut tails_data = Arc::new(Mutex::new(vec));
+    let mut thread_handlers = Vec::new();
+
+    let size = rtg.getSize() ;
+    let mut index = 0;
+    unsafe{
+    for i in 0..size
+    {
+        index = i;
+        let mut tails_data = tails_data.clone();
+        thread_handlers.push(thread_scoped::scoped( move || {
+            match rtg.generate_tail(index){
+                Ok(v) => {
+                    let tail = v.unwrap();
+
+                    match tail.to_bytes(){
+                        Ok(v) => {
+                            let mut tail_bytes = v;
+                            let mut tails_data=tails_data.lock().unwrap();
+                            let t = TailAndIndex{ tail:tail_bytes,ind:index};
+                            tails_data.push(t);
+                        }
+                        Err(e) => {
+                            println!("error parsing header: {:?}", e);
+                        } 
+                    }
+                }   
+                 Err(e) => {
+                     println!("error parsing header: {:?}", e);
+                }
+            }    
+        }))
+    }
+    }
+
+    for handler in thread_handlers {
+        handler.join();
+    }
+
+    let mut tails_data_tmp = tails_data.clone();
+    let mut tails_data_tp= tails_data_tmp.lock().unwrap();
+    let mut map:HashMap<u32, Vec<u8>> = HashMap::new();
+
+    let size_tmp = size as usize;
+    for i in 0..size_tmp{
+        let tail_and_index :&TailAndIndex = &tails_data_tp[i];
+        map.insert(tail_and_index.ind,tail_and_index.tail.clone());
+    }
+
+    for i in 0..size
+    {
+        let tail_bytes = map.get(&i).unwrap();
         service.append(blob_handle, tail_bytes.as_slice())?;
     }
+
 
     let res = service.finalize(blob_handle).map(|(location, hash)| (location, hash.to_base58()))?;
 
     debug!("store_tails_from_generator <<< res: {:?}", res);
     Ok(res)
 }
+
+

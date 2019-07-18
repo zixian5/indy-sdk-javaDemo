@@ -13,6 +13,8 @@ import static org.junit.Assert.*;
 import static utils.EnvironmentUtils.getIndyHomePath;
 import static utils.PoolUtils.PROTOCOL_VERSION;
 
+import java.util.Date;
+
 
 class AnoncredsRevocation {
 
@@ -59,14 +61,19 @@ class AnoncredsRevocation {
 		String credDefJson = createCredDefResult.getCredDefJson();
 
 		//6. Issuer create Revocation Registry
-		String revRegDefConfig = new JSONObject("{\"issuance_type\":\"ISSUANCE_ON_DEMAND\",\"max_cred_num\":5}").toString();
-		String tailsWriterConfig = new JSONObject(String.format("{\"base_dir\":\"%s\", \"uri_pattern\":\"\"}", getIndyHomePath("tails")).replace('\\', '/')).toString();
+		//1880 2984 24606
+		String revRegDefConfig = new JSONObject("{\"issuance_type\":\"ISSUANCE_ON_DEMAND\",\"max_cred_num\":100}").toString();
+		String tailsWriterConfig = new JSONObject("{\"base_dir\": \"/tmp/indy_acme_tails\", 	\"uri_pattern\": \"\" }").toString();
 		BlobStorageWriter tailsWriter = BlobStorageWriter.openWriter("default", tailsWriterConfig).get();
 
 		String revRegDefTag = "Tag2";
+		long start = new Date().getTime();
 		AnoncredsResults.IssuerCreateAndStoreRevocRegResult createRevRegResult =
 				issuerCreateAndStoreRevocReg(issuerWallet, issuerDid, null, revRegDefTag, credDefId, revRegDefConfig, tailsWriter).get();
 		String revRegId = createRevRegResult.getRevRegId();
+		long end = new Date().getTime();
+		System.out.println("issuerCreateAndStoreRevocReg need "+ (end-start)); 
+
 		String revRegDefJson = createRevRegResult.getRevRegDefJson();
 
 		//7. Prover create Master Secret

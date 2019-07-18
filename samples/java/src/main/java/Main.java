@@ -7,7 +7,7 @@ public class Main {
 	public static void main(String[] args) throws Exception {
 
 
-		new GettingStarted().run();
-
+		//new GettingStarted().run();
+		AnoncredsRevocation.demo();
 	}
 }

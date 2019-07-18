@@ -1,6 +1,9 @@
+extern crate time;
+
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
+use time::*;
 
 use indy_crypto::cl::{
     new_nonce,
@@ -408,14 +411,18 @@ impl IssuerCommandExecutor {
 
         let cred_def: CredentialDefinition = self.wallet_service.get_indy_object(wallet_handle, &cred_def_id, &RecordOptions::id_value())?;
 
+	let start = time::now();
         let (revoc_public_keys, revoc_key_private, revoc_registry, mut revoc_tails_generator) =
             self.anoncreds_service.issuer.new_revocation_registry(&CredentialDefinitionV1::from(cred_def),
                                                                   max_cred_num,
                                                                   issuance_type.to_bool(),
                                                                   issuer_did)?;
-
+	let end = time::now();
+	println!("new_revocation_registry {:?}", end-start);
         let (tails_location, tails_hash) =
             store_tails_from_generator(self.blob_storage_service.clone(), tails_writer_handle, &mut revoc_tails_generator)?;
+	let end2 = time::now();
+	println!("store_tails_from_generator {:?}", end2-end);
 
         let revoc_reg_def_value = RevocationRegistryDefinitionValue {
             max_cred_num,
